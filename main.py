@@ -1,17 +1,23 @@
+import math
+
 from cv2 import imread, imwrite, imshow, waitKey, IMREAD_GRAYSCALE
-from math import sqrt
+import numpy as np
+from math import sqrt, log, exp
+from matplotlib.pyplot import hist
+
+
+# Составление гистограммы изображения
+# def get_hist(image):
 
 
 # Загрузка изображения в память
 def load_image(text):
-
     image = imread(f'{text}', IMREAD_GRAYSCALE)
     return image
 
 
 # Обработка изображения фильтром Робертса
 def roberts(image):
-
     mask_x = ((1, 0), (0, -1))
     mask_y = ((0, 1), (-1, 0))
 
@@ -20,22 +26,136 @@ def roberts(image):
     for i in range(0, image.shape[0]):
         for j in range(0, image.shape[1]):
 
-            g_x = 0
-            g_y = 0
+            mean_x = 0
+            mean_y = 0
 
             for di in range(0, 2):
                 for dj in range(0, 2):
+                    mean_x += image[i + di][j + dj] * mask_x[di][dj]
+                    mean_y += image[i + di][j + dj] * mask_y[di][dj]
 
-                    g_x += image[i + di][j + dj] * mask_x[di][dj]
-                    g_y += image[i + di][j + dj] * mask_y[di][dj]
-
-            result_image[i][j] = sqrt(g_x**2 + g_y**2)
+            result_image[i][j] = sqrt(mean_x ** 2 + mean_y ** 2)
 
     imshow('result', result_image)
+    waitKey(0)
+
+
+# Обработка изображения фильтром Собеля
+def sobel(image):
+    mask_x = ((-1, 0, 1), (-2, 0, 2), (-1, 0, 1))
+    mask_y = ((-1, -2, -1), (0, 0, 0), (1, 2, 1))
+
+    result_image = image.copy()
+
+    for i in range(0, image.shape[0] - 2):
+        for j in range(0, image.shape[1] - 2):
+
+            mean_x = 0
+            mean_y = 0
+
+            for di in range(-1, 2):
+                for dj in range(-1, 2):
+                    mean_x += image[i + di][j + dj] * mask_x[1 + di][1 + dj]
+                    mean_y += image[i + di][j + dj] * mask_y[1 + di][1 + dj]
+
+            result_image[i][j] = sqrt(mean_x ** 2 + mean_y ** 2)
+
+    imshow('result-sobel', result_image)
+    waitKey(0)
+
+
+# Обработка изображения фильтром Превитта
+def previtt(image):
+    mask_x = ((-1, 0, 1), (-1, 0, 1), (-1, 0, 1))
+    mask_y = ((-1, -1, -1), (0, 0, 0), (1, 1, 1))
+
+    result_image = image.copy()
+
+    for i in range(1, image.shape[0] - 2):
+        for j in range(1, image.shape[1] - 1):
+
+            mean_x = 0
+            mean_y = 0
+
+            for di in range(-1, 2):
+                for dj in range(-1, 2):
+                    mean_x += image[i + di][j + dj] * mask_x[1 + di][1 + dj]
+                    mean_y += image[i + di][j + dj] * mask_y[1 + di][1 + dj]
+
+            result_image[i][j] = sqrt(mean_x ** 2 + mean_y ** 2)
+
+    imshow('result-previtt', result_image)
+    waitKey(0)
+
+
+# Обработка изображений фильтра Кирша
+def kirsch(image):
+    mask = [[5, 5, 5], [-3, 0, -3], [-3, -3, -3]]
+
+    z_list = []
+
+    result_image = image.copy()
+
+    for i in range(1, image.shape[0] - 2):
+        for j in range(1, image.shape[1] - 2):
+
+            g_x = 0
+
+            for k in range(0, 9):
+
+                for di in range(-1, 2):
+                    for dj in range(-1, 2):
+                        g_x += image[i + di][j + dj] * mask[1 + di][1 + dj]
+
+                temp = mask[0][0]
+                mask[0][0] = mask[1][0]
+                mask[1][0] = mask[2][0]
+                mask[2][0] = mask[2][1]
+                mask[2][1] = mask[2][2]
+                mask[2][2] = mask[1][2]
+                mask[1][2] = mask[0][2]
+                mask[0][2] = mask[0][1]
+                mask[0][1] = temp
+
+                z_list.append(abs(g_x))
+
+            result_image[i][j] = max(z_list)
+
+    imshow('result-kirsch', result_image)
+    waitKey(0)
+
+
+# Обработка изображения фильтром Уоллеса
+def wallace(image):
+    result_image = image.copy()
+    zalupa_image = [[0] * image.shape[0]] * image.shape[1]
+
+    # Перед обработкой все яркости +1
+    for i in range(0, image.shape[0]):
+        for j in range(0, image.shape[1]):
+            if image[i][j] != 255:
+                image[i][j] += 1
+
+    # Первый проход
+    for i in range(1, image.shape[0] - 2):
+        for j in range(1, image.shape[1] - 2):
+            zalupa_image[i][j] = abs(log(image[i][j] ** 4 / (image[i - 1][j] * image[i][j - 1] * image[i + 1][j] *
+                                                             image[i][j + 1]), exp(1)))
+
+    # Вычисление гистограммы
+    histogram = hist(zalupa_image.ravel(), 256)
+    max_z = max(histogram)
+    min_z = min(histogram)
+
+    imshow('result-wallace', result_image)
     waitKey(0)
 
 
 if __name__ == '__main__':
     text1 = 'niger.jpg'
     image1 = load_image(text1)
-    roberts(image1)
+    # roberts(image1)
+    # sobel(image1)
+    # previtt(image1)
+    # kirsch(image1)
+    wallace(image1)
