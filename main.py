@@ -128,7 +128,7 @@ def kirsch(image):
 # Обработка изображения фильтром Уоллеса
 def wallace(image):
     result_image = image.copy()
-    zalupa_image = [[0] * image.shape[0]] * image.shape[1]
+    zalupa_image = image.copy()
 
     # Перед обработкой все яркости +1
     for i in range(0, image.shape[0]):
@@ -137,15 +137,29 @@ def wallace(image):
                 image[i][j] += 1
 
     # Первый проход
-    for i in range(1, image.shape[0] - 2):
-        for j in range(1, image.shape[1] - 2):
-            zalupa_image[i][j] = abs(log(image[i][j] ** 4 / (image[i - 1][j] * image[i][j - 1] * image[i + 1][j] *
-                                                             image[i][j + 1]), exp(1)))
+    for i in range(1, image.shape[0] - 1):
+        for j in range(1, image.shape[1] - 1):
+            # x = int(image[i - 1][j])
+            # y = int(image[i][j - 1])
+            # z = int(image[i + 1][j])
+            # v = int(image[i][j + 1])
+            # b = int(image[i][j])
+            # bla = b ** 4 / (x * y * z * v)
+            zalupa_image[i][j] = abs(float(
+                log(int(image[i][j]) ** 4 / (int(image[i - 1][j]) * int(image[i][j - 1]) * int(image[i + 1][j]) *
+                                             int(image[i][j + 1])), exp(1))))
 
     # Вычисление гистограммы
-    histogram = hist(zalupa_image.ravel(), 256)
-    max_z = max(histogram)
-    min_z = min(histogram)
+    mas = zalupa_image.ravel()
+    max_h = max(mas)
+    min_h = min(mas)
+
+    coefficient = 255 / (max_h - min_h)
+
+    for i in range(1, image.shape[0] - 2):
+        for j in range(1, image.shape[1] - 2):
+
+            result_image[i][j] = int(30 * coefficient * (zalupa_image[i][j] - min_h))
 
     imshow('result-wallace', result_image)
     waitKey(0)
